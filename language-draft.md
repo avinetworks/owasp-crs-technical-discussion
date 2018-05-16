@@ -1,5 +1,35 @@
 # Towards a new language for WAF CRS #
 
+* [Goals and Assumptions and Vision](#goals-and-assumptions-and-vision)
+  * [Motivation](#motivation)
+  * [Assumptions](#assumptions)
+  * [Vision](#vision)
+* [Whats wrong with the modsec language](#whats-wrong-with-the-modsec-language)
+  * [High level](#high-level)
+  * [Data Types](#data-types)
+  * [Variables](#variables)
+  * [Actions](#actions)
+  * [language features](#language-features)
+  * [language limitations](#language-limitations)
+* [Analysis of the current CRS rules](#analysis-of-the-current-crs-rules)
+* [Proposal](#proposal)
+  * [Overall design vision](#overall-design-vision)
+  * [Syntax](#syntax)
+  * [Semantik](#semantik)
+    * [Data Types](#data-types-1)
+    * [Variables and Constants](#variables-and-constants)
+    * [Predefined Variables](#predefined-variables)
+      * [define a request independent constant](#define-a-request-independent-constant)
+      * [extract a value from the request](#extract-a-value-from-the-request)
+      * [Modification of variables](#modification-of-variables)
+    * [Conditions](#conditions)
+    * [Control Flow](#control-flow)
+      * [if\-then\-else](#if-then-else)
+      * [include](#include)
+      * [Actions](#actions-1)
+    * [Rules](#rules)
+* [Open Questions](#open-questions)
+
 # Goals and Assumptions and Vision #
 
 ## Motivation ##
