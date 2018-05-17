@@ -15,7 +15,7 @@
 * [Proposal](#proposal)
   * [Overall design vision](#overall-design-vision)
   * [Syntax](#syntax)
-  * [Semantik](#semantik)
+  * [Semantic](#semantic)
     * [Data Types](#data-types-1)
     * [Variables and Constants](#variables-and-constants)
     * [Predefined Variables](#predefined-variables)
@@ -36,30 +36,30 @@
 
 CRS is described in the modsec language. This makes it harder for other (non-modsec) WAFs to adapt CRS. 
 
-It makes it also harder for the CRS team to maintain these rules in a good quality. 
+It makes it hard to maintain these rules in a good quality. Having a more abstracted version which get's compiled down should improve readability.
 
 ## Assumptions ##
 
  - A CRS rule set should be as declarative as possible. Imperative programming style is harder to read, understand and test.
  - The CRS ruleset should be platform independent and should have tools for compilation from the platform independent format to platform specific formats (for example modsec)
- - There is a difference between a WAF config and the CRS. Today, this is mixed as CRS is bound to a single WAF. For example, IP reputation is part of WAF but should not be part of CRS. 
- - A good WAF should allow 2 kinds of configuration. There should be a declarative part which will solve 95% of all the problems. And a scripting language part which should be good enough to solve all other problems. I see CRS clearly in the declarative config part. A "normal user" should configure their WAF and not program it.
+ - There is a difference between a WAF config and the CRS. Today, this is mixed as CRS is bound to a single WAF. For example, IP reputation is part of WAF but should not be a part of CRS. 
+ - A good WAF should allow 2 kinds of configuration. There should be a declarative part which will solve 95% of all the problems. And a scripting language part which should be good enough to solve all other problems. I see CRS clearly in the declarative config part. A "typical user" should configure their WAF and not program it.
 
 ## Vision ##
 
  - Having a simple to parse, simple to implement declarative language which contains the CRS.
  - Having a compiler from this language into modsec language. The final modsec representation of the CRS should match the current CRS.
  - Having a simple execution model of a WAF in Python which works together with https://github.com/fastly/ftw to check the ruleset.
- - Having compilers from this new language to other WAFs and/or webstacks. For example, having an embedded WAF/CRS interpreter for J2EE stacks or Django middleware would improve the WAF space and makes CRS a more important player.
+ - Having compilers from this new language to other WAFs and/or webstacks. For example, having an embedded WAF/CRS interpreter for Java stacks or Django middleware would improve the WAF space and makes CRS a more important player.
  
 
 # Whats wrong with the modsec language #
 
-When we are talking about modsec, we mean ["modsec - the language"](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29) which is implemented by "modsec the library" 
+When we refer to modsec, we mean ["modsec - the language"](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29) which is implemented by "modsec the library" 
 
 ## High level ##
 
- - ModSec (from its history as an Apache Plugin) uses a syntax which is compatible to apache config files
+ - ModSec (from its history as an Apache Plugin) uses a syntax which is compatible to Apache config files
  - ModSec (from its history as an Apache Plugin) added all extensions from the last 10+ years to be compatible with this original syntax and model and is very confusing for new users. This starts with correct quoting, the different kind of actions, the absent of data types, chain rules, etc.
 
 ## Data Types ##
@@ -77,7 +77,9 @@ setvar:'tx.allowed_http_versions=HTTP/1.0 HTTP/1.1 HTTP/2 HTTP/2.0'
 setvar:'tx.restricted_extensions=.asa/ .asax/ .ascx/ .axd/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pol/ .printer/ .pwd/ .resources/ .resx/ .sql/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/'"
 ```
 
-There is no difference between a string and an int in modsec. But there are different comparison operators which generate problems. This should be detected and/or the right operator should be clear from the context. If we need a string as an Int (for example the value of the Content-Lenght header, we should have to express this explicitly.
+There is no difference between a `string` and an `int` in modsec.
+But there are different comparison operators which generate problems.
+This should be detected and/or the right operator should be clear from the context. If we need a `string` as an `int` (for example the value of the Content-Lenght header, we should have to express this explicitly.
 
 ## Variables ##
 
@@ -109,11 +111,11 @@ modsec is using "actions" for a couple of different things.
 
 modsec defines PCRE as the regex engine and may construct problems with other engines like python re or Google re2
 
-modsec is using some special operators like verifyCC or similar for features which should probably implemented as a regex and a validation function.
+modsec is using some special operators like verifyCC or similar for features which should be implemented as a regex and a validation function.
 
 ## language limitations ##
 
-For some cases, there are special operators, like verifyCC. Some things can not be implemented, like validation of range header - CRS rule 920190. It is not possible to write a rule which will 
+For some cases, there are special operators, like verifyCC. Some things can not be implemented, like validation of range header - CRS rule 920190. It is not possible to write a rule which will:
  - extract multiple parts from a variables
  - verify every single part in a second rule
 
@@ -137,13 +139,13 @@ Some things are out of scope for this document. They are part of WAF but not nec
 
 ## Syntax ##
 
-I have very strong opinions how a good syntax should look like, but I think this should be discussed later. 
+I have a very strong opinion on how a good syntax should look like, but I think this should be discussed later. 
 
 To avoid discussions here, I'm using here YAML as syntax. 
 
 You may find pieces of proposals of alternative syntax inline, please do not discuss this except when you love it ;-)
 
-## Semantik ##
+## Semantic ##
 
 ### Data Types ###
 
@@ -180,7 +182,7 @@ Operations on these types
 
 ### Predefined Variables ###
 
-All variables which exist in modsec which describe a part of the request do exist with the same name here for pragmatic reasons. We may rename them later. G
+All variables which exist in modsec which describe a part of the request do exist with the same name here for pragmatic reasons. We may rename them later. 
 
 #### define a request independent constant ####
 
@@ -231,8 +233,9 @@ variables which does not exist, for example REQUEST_HEADER:foo)
 
 #### Modification of variables ####
 
-In an ideal world, we should *never* modify a variable. But for some special cases in the application specific exclusion handling, we are adding 2 operators which are working on lists: `add-to-list` and `remove-from-list`.
-To contain the declarative behaviour, it is not allowed to have the same string in an `add-to-list` and `remove-from-list` for the same list. Which means that the order of the add/remove ops are not relevant and it is still declarative in some sense
+In an ideal world, we should *never* modify a variable. So we should treat themn as constants. 
+But for some special cases in the application specific exclusion handling, we are adding 2 operators which are working on lists: `add-to-list` and `remove-from-list`.
+To contain the declarative behaviour, it is not allowed to have the same string in an `add-to-list` and `remove-from-list` for the same list. Which means that the order of the add/remove ops are not relevant and it is still declarative in some sense.
 ```
 
 add-to-list:
