@@ -34,9 +34,12 @@
 
 ## Motivation ##
 
-CRS is described in the modsec language. This makes it harder for other (non-modsec) WAFs to adapt CRS. 
+CRS is described in the modsec language.
 
-It makes it hard to maintain these rules in a good quality. Having a more abstracted version which get's compiled down should improve readability.
+ - This makes it harder for other (non-modsec) WAFs to adapt CRS. 
+ - It makes it hard to maintain these rules in good quality.
+
+Having a more abstracted version which get's compiled down should improve readability.
 
 ## Assumptions ##
 
@@ -134,14 +137,14 @@ Some things are out of scope for this document. They are part of WAF but not nec
 ## Overall design vision ##
 
  - fully declarative (single assignment)
- - Vendor idependent - should become a OWASP project
+ - Vendor independent - should be a community project and part of CRS.
  
 
 ## Syntax ##
 
 I have a very strong opinion on how a good syntax should look like, but I think this should be discussed later. 
 
-To avoid discussions here, I'm using here YAML as syntax. 
+To avoid discussions here, I'm using YAML as syntax. 
 
 You may find pieces of proposals of alternative syntax inline, please do not discuss this except when you love it ;-)
 
@@ -233,7 +236,7 @@ variables which does not exist, for example REQUEST_HEADER:foo)
 
 #### Modification of variables ####
 
-In an ideal world, we should *never* modify a variable. So we should treat themn as constants. 
+In an ideal world, we should *never* modify a variable. So we should treat them as constants. 
 But for some special cases in the application specific exclusion handling, we are adding 2 operators which are working on lists: `add-to-list` and `remove-from-list`.
 To contain the declarative behaviour, it is not allowed to have the same string in an `add-to-list` and `remove-from-list` for the same list. Which means that the order of the add/remove ops are not relevant and it is still declarative in some sense.
 ```
@@ -379,10 +382,22 @@ So a rule is more or less the same as an `if/then/else` construct with some meta
 
 # Open Questions #
 
+## Positive Security model ##
+
 Do we want to include a positive security model? The current implementation of application specific stuff by disabling some rules for some parameters is more a simple false positive handling. We should be able to declare something like:
 
 > if the Wordpress flag is set, and the URL starts with admin, the ARGS:password parameter should match ^.{0,32}$. If not, the request should be rejected. if yes, do not bother to check "ARGS:password" on any other rule at all, it is ok.  
           
+## Test ##
+
+Tests should be a first class objects when describing a ruleset.
+
+Which means, for every condition it should be possible to add a
+list of values which should match and not match. A rule validator
+should run these tests. A compiler should run these tests during
+compilation and abort when they are failing.
+
+Need a syntax for this.
 
       
 
