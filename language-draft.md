@@ -222,12 +222,13 @@ We need a way to extract more data from the request if the underlying WAF does n
 
 ```.yaml
 - define:
-    name: content_type
-    type: int
+    comment: extract the request extension, first chain from 912150
+    name: request_basename_extension
+    type: string
     extract:
-        variable: REQUEST_HEADERS:Content-Type
-        pattern: /\s*([^\s;]+)/
-        value: int($1)
+        variable: REQUEST_BASENAME
+        pattern: /(\.[a-z0-9]{1,10})?$/
+        value: $1
 ```
 
 If the variable is not defined, the new variable is not defined. A
@@ -239,14 +240,14 @@ variables which does not exist, for example REQUEST_HEADER:foo)
 In an ideal world, we should *never* modify a variable. So we should treat them as constants. 
 But for some special cases in the application specific exclusion handling, we are adding 2 operators which are working on lists: `add-to-list` and `remove-from-list`.
 To contain the declarative behaviour, it is not allowed to have the same string in an `add-to-list` and `remove-from-list` for the same list. Which means that the order of the add/remove ops are not relevant and it is still declarative in some sense.
-```
 
-add-to-list:
+```.yaml
+- add-to-list:
     variable: allowed_request_content_type
     elements:
         - "application/special-content-type"
         
-remove-from-list:
+- remove-from-list:
     variable: allowed_request_content_type
     elements:
         - "text/xml"
@@ -258,13 +259,17 @@ remove-from-list:
 
 Conditions are more or less the same as modsec variables + operators
 
-```
-condition:
-    - variables:
-          - REQUEST_FILENAME
-      transformations:    
-      operator: endswith
-      parameter: "/wp-login.php"
+```.yaml
+- condition:
+    - comment: check if the extension of the request is in the list of restricted extensions
+      variables:
+          - request_basename_extension
+      transformations:
+          - lowercase
+      operator: in
+      parameter: restricted_extensions
+
+- condition:
     - variables:
           - ARGS
           - REQUEST_HEADERS
@@ -285,7 +290,9 @@ There are additional operators for new data types:
  - *var* exists
  	- is defined and not nil
 
-There are also special variables $0 ... $9 which can be used if the operator in the preceding condition was rx. These variables are then interpreted like a capture in the current modsec ruleset. 
+There are also special variables $0 ... $9 which can be used if the
+operator in the preceding condition was rx. These variables are
+then interpreted like a capture in the current modsec ruleset.
 > Not sure if this is needed, this can be probably avoided with the definition of new variables with extract data from a request.
 
       
@@ -301,10 +308,9 @@ In the `then` and `else` block can contain anything which is allowed on the topl
 The `else` part is optional
 
 ```.yaml
-----
-if:
+- if:
     conditions:
-        - conditions 1
+        - condition 1
         - condition 2
     then:
         - define
@@ -312,8 +318,6 @@ if:
         - rule
     else:
         - define
-        - rule 
-        - if:
 ```
 
 
@@ -322,7 +326,6 @@ if:
 To allow modularisation, we should allow an include directive
 
 ```.yaml
----
 - include: name-of-file
 - include:
   - file-name-1
@@ -340,11 +343,20 @@ The following list of actions can be executed, either in `global`, in an `if` bl
  - allow
  
 ```.yaml
-- action:
-    disable-rule: 12345
-    remove-variable-from-rule:
+- actions:
+    - disable-rule: 12345
+    - remove-variable-from-rule:
         variable: ARGS:password
         rules: 1-9999999
+- actions:
+    - block
+
+- actions:
+    - block:
+        comment: do we really need to be this specific here?
+        reason: Content-Length header is required.
+        code: 411
+
 ```
 
 
@@ -360,12 +372,11 @@ So a rule is more or less the same as an `if/then/else` construct with some meta
     meta:
         phase: request  # not sure if we need this
         message: "Possible Foo attacks"
-        logdata:
         paranoia-level: 1
-        severity: CRITICAL
-        version:
-        revision:
-        tag:
+        severity: CRITICAL # also be used to determine anomaly value
+        version: 1
+        # ...
+        tags:
             - "application-multi"
     conditions:
         - variable: 
@@ -374,7 +385,8 @@ So a rule is more or less the same as an `if/then/else` construct with some meta
              - removeSpaces  
           operator: rx
           paramater: /some crazy regex/  
-    action: block  
+    actions:
+        - block  
 ```          
 
         
