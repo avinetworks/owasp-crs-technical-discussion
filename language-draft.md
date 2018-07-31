@@ -81,15 +81,21 @@ Exclusions (or Exceptions) are used to adapt a generic rule to a local installat
  
 ## Overall design constraints ##
 
-We still need rule-id's for manageability pf the CRS.
+We still need rule-id's for manageability of the CRS.
+
+We need to be able to translate all the rules to ModSecurity and other WAF's rule language. This means that some features can not be expressed. An example for a feature which can not be expressed is a proper check of the Request-Range header which CRS rule 920190 is trying to achieve.
+
+For features like the positive security model, we need a way to mark the value of a variable as not to be checked by upcoming rules. ModSecurity does have the "removeTargetById" feature which does basically this. But doing it right in ModSecurity is hard, because there is no clear distinction between variables which are used for control flow and variables which are used to check for attacks. A good example here is the REQUEST_HEADERS:Content-Type. It is used in control flow (for deciding which body processor to use) and can also be the place to detect attacks. A rule language should distinguish these 2 kinds of usage.
 
 ## Syntax ##
 
 Different people have different opinions about good syntax. But the more important point is the semantic, so we will drop the discussion of the syntax for now.
 
-As a "lingua franca" the language should use an universal data exchange format for it's syntax. 
+As a "lingua franca" the language should use a universal data exchange format for it's syntax. 
 
-I'm using [YAML](http://yaml.org) as syntax, JSON and XML would be fine too, but I think YAML is easier to read for a human.
+I'm using [YAML](http://yaml.org) as syntax, JSON and XML would be fine too, but I think YAML is easier to read (while harder to write than JSON) for a human.
+
+We describe the language here in it's full canonical form. On some places, things can be omitted and abbreviated to make it more readable. 
 
 
 ## Semantic ##
@@ -106,7 +112,7 @@ The following scalar data types should be supported
 Compound types:
 
  - list of (strings, int, regex)
- - collection string -> scalar (multi value like ModSec)
+ - collection string -> scalar (multi value like ModSec). I'm not sure if we really need this now, but wee keep
  
 Operations on these types
 
@@ -246,6 +252,8 @@ All 3 conditions are more or less the same as modsecurity variables + operators
       variables:
           - ARGS
           - REQUEST_HEADERS
+      exclude:
+          - ARGS:editor_input_field
       operator: rx
       parameter: /script>/
 
@@ -334,6 +342,8 @@ Note that there is no setvar here, because I think it is not needed. All the ano
 
 ### Rules ###
 
+#### classic negative security model ###
+
 A rule contains of meta data, optional preconditions and detect rule. I removed the actions here, because they are probably not needed and is always block - depended on the severity is may also only be log - but this is not part of the rule knowledge but part of the environment and the compiler
 
 ```.yaml
@@ -356,15 +366,72 @@ A rule contains of meta data, optional preconditions and detect rule. I removed 
           operator: @streq
           parameter: "foo"
     detect:
-        variable: 
+        variables: 
             - ARGS
         transformations:
-             - removeSpaces  
-        operator: rx
-        parameter: /some crazy regex/
-
-         
+             - removeSpaces
+        checks:
+            - operator: rx
+              parameter: /some crazy regex/
+     
 ```  
+
+Note that "checks" is a list of multiple conditions on these variables. The conditions must all be true to match a variable. In most rules, we will only have one condtions. In this case, as a shortcut, "checks" can be omitted and operator and parameter can be moved up one level in the structure.
+
+#### positive security model ####
+
+The rules are looking the same as above. Instead of "detect" we are using "ensure" to define how a variable should look like. As mentioned in the beginning, positive security rules can be "required", "sufficient" or both. If they are "required" and a variable does not match, this counts as "detecting an attack". If the rule is sufficient and a variable match, this means that this variable will not be checked by following rule, especially by the classical negative security model rules. To make the rule order still declarative, the compiler will warn you if the result is oder depended. From a performance point of view, we prefer to execute all positive security model rules before the negative security model rules and execute the sufficient rules before the required rules.
+
+```.yaml
+- rule:
+    id: 42
+    meta:
+    comment: 
+        - We do not care about __utm request cookie in the following rules, as long
+        - as it is not bigger than 4k. We will reject a request with an __utm cookie
+        - larger than 4k
+    ensure:
+        variables:
+            - REQUEST_COOKIES:__utm
+        checks:
+            - operator: @true
+            - operator: @length
+              parameter: 4k
+        mode:
+            - sufficient
+            - required
+  
+
+- rule: 
+    id: 23
+    meta:
+    comment: a product id is used a direct database reference. It must be a number.
+    ensure:
+        variables:
+            - ARGS:product_id   
+        checks:
+            - operator: @rx
+              parameter: /^\d{1,20}$/
+        mode:
+            - required
+            - sufficient
+            
+- rule:
+    id: 34
+    meta:
+    comment: input field foo is base64 encoded stuff
+    ensure:
+        variables:
+            - ARGS:foo
+        checks:
+            - operator: @rx  
+              parameter: /^[0-9a-zA-Z+/]+=?=?$/
+        mode:
+            - requried
+
+```
+          
+
 
 FIXME: need to add syntax for PSM here.                
 
@@ -443,6 +510,73 @@ SecRule REQUEST_HEADERS:Authorization "^Basic ([a-zA-Z0-9]+=*)$" "phase:1,id:93,
         operator: in
         value: $invalid_basic_auth_usernames
 ```
+
+### Accessing the same variable multiple times ###
+
+See rule 942150
+
+```
+SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@pmf sql-function-names.data" \
+    "id:942150,\
+    phase:2,\
+    block,\
+    capture,\
+    t:none,t:urlDecodeUni,t:lowercase,\
+    msg:'SQL Injection Attack',\
+    logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+    tag:'application-multi',\
+    tag:'language-multi',\
+    tag:'platform-multi',\
+    tag:'attack-sqli',\
+    tag:'OWASP_CRS/WEB_ATTACK/SQL_INJECTION',\
+    tag:'WASCTC/WASC-19',\
+    tag:'OWASP_TOP_10/A1',\
+    tag:'OWASP_AppSensor/CIE1',\
+    tag:'PCI/6.5.2',\
+    tag:'paranoia-level/2',\
+    ctl:auditLogParts=+E,\
+    rev:2,\
+    ver:'OWASP_CRS/3.0.0',\
+    severity:'CRITICAL',\
+    chain"
+    SecRule MATCHED_VARS "@rx (?i)\b(?:c(?:o(?:n(?:v(?:ert(?:_tz)?)?|c....
+        "setvar:'tx.msg=%{rule.msg}',\
+        setvar:'tx.sql_injection_score=+%{tx.critical_anomaly_score}',\
+        setvar:'tx.anomaly_score=+%{tx.critical_anomaly_score}',\
+        setvar:'tx.%{rule.id}-OWASP_CRS/WEB_ATTACK/SQL_INJECTION-%{matched_var_name}=%{tx.0}'"
+```
+
+Can be translated to
+
+```.yaml
+- define:
+    name: sql_function_names
+    type: [string]
+    load: "sql-function-name.data"
+    
+- define:
+    name: sql_function_names_regex
+    type: regex
+    value: /(?i)\b(?:c(?:o(?:n(?:v(?:ert(?:_tz)?)?|c.......    
+- rule:
+    id: 942150
+    meta:
+        ....
+    detect:
+        variables: 
+            - REQUEST_COOKIES
+            - REQUEST_COOKIES_NAMES
+            - ARGS_NAMES
+            - ARGS
+            - XML:/* 
+        exclude:
+            - REQUEST_COOKIES:/__utm/
+        checks:
+            - operator: @pm
+              parameter: ${sql_function_name}
+            - operator: @rx
+              parameter: ${sql_function_names_regex}
+```    
     
 
 
