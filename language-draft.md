@@ -30,6 +30,7 @@ Towards a new language for WAF CRS
   * [Examples](#examples)
      * [Multiple extraction steps](#multiple-extraction-steps)
      * [Accessing the same variable multiple times](#accessing-the-same-variable-multiple-times)
+     * [Example from PR 4](#example-from-pr-4)
 
 ## Motivation ##
 
@@ -275,7 +276,7 @@ There are additional operators for new data types:
  - *var* == *element*
  - *var* ~ *regex*
  - *var* exists
- 	- is defined and not nil
+        - is defined and not nil
       
 
 ### Control Flow ###
@@ -576,9 +577,86 @@ Can be translated to
             - operator: @rx
               parameter: ${sql_function_names_regex}
 ```    
-    
 
 
+### Example from PR 4  ###
+
+```.yaml
+
+- rule:
+    id: 920100
+    comment: Check HTTP/1.1 request line for correctness
+    meta:
+        name: HTTP/1.1 Request line
+        strategy: whitelist
+        phase: request-nobody
+        message: "Invalid HTTP Request Line"
+        paranoia-level: 1
+        version: OWASP_CRS/3.1.0
+        - CAPEC:
+            - 272
+    ensure:
+        variables:
+            - REQUEST_LINE
+        transformations:
+            - lowercase
+        checks:
+            - operator: rx
+              parameter:
+                  - /^(?i:(?:[a-z]{3,10}\s+(?:\w{3,7}?:\/\/[\w\-\.\/]*(?::\d+)?)?\/[^?#]*(?:\?[^#\s]*)?(?:#[\S]*)?)?)$/
+                  - /^(?i:(?:connect (?:\d{1,3}\.){3}\d{1,3}\.?(?::\d+)?)?)$/
+                  - /^(?i:get \/[^?#]*(?:\?[^#\s]*)?(?:#[\S]*)?)$/
+        mode:
+            - required
+
+
+- rule:
+    id: 920120
+    comment: Block Filenames with out of place metachars
+    meta:
+        name: HTTP/1.1 Request line
+        strategy: blacklist
+        message: "Attempted multipart/form-data bypass"
+        paranoia-level: 1
+        version: OWASP_CRS/3.1.0
+        phase: request-body
+        - CAPEC:
+            - 272
+    detect:
+        operator: rx
+        variables:
+            - REQUEST_LINE
+        transformations:
+            - htmlEntityDecode
+            - lowercase
+        checks:
+            - operator: rx
+              parameter:
+                  - /;/
+                  - /['"=]/
+
+- rule:
+    id: 920160
+    comment: Check to ensure content-length header is numeric
+    meta:
+        name: Content-length numeric header
+        strategy: whitelist
+        message: "Content-Length HTTP header is not numeric"
+        paranoia-level: 1
+        version: OWASP_CRS/3.1.0
+        - CAPEC:
+            - 272
+    ensure:
+        variables:
+            - REQUEST_HEADERS:Content-Length
+        checks:
+            - operator: rx
+              parameter:
+                  - /^\d+$/
+        mode:
+          - required
+
+```
 
 
       
