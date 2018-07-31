@@ -588,13 +588,13 @@ Can be translated to
     comment: Check HTTP/1.1 request line for correctness
     meta:
         name: HTTP/1.1 Request line
-        strategy: whitelist
-        phase: request-nobody
         message: "Invalid HTTP Request Line"
+        strategy: whitelist
         paranoia-level: 1
         version: OWASP_CRS/3.1.0
-        - CAPEC:
-            - 272
+        tags:
+            - CAPEC:
+                - 272
     ensure:
         variables:
             - REQUEST_LINE
@@ -619,11 +619,10 @@ Can be translated to
         message: "Attempted multipart/form-data bypass"
         paranoia-level: 1
         version: OWASP_CRS/3.1.0
-        phase: request-body
-        - CAPEC:
-            - 272
+        tags:
+            - CAPEC:
+                - 272
     detect:
-        operator: rx
         variables:
             - REQUEST_LINE
         transformations:
@@ -644,8 +643,9 @@ Can be translated to
         message: "Content-Length HTTP header is not numeric"
         paranoia-level: 1
         version: OWASP_CRS/3.1.0
-        - CAPEC:
-            - 272
+        tags:
+            - CAPEC:
+                - 272
     ensure:
         variables:
             - REQUEST_HEADERS:Content-Length
