@@ -1,32 +1,35 @@
 Towards a new language for WAF CRS
 ==================================
 
-   * [Motivation](#motivation)
-   * [Assumptions](#assumptions)
-   * [Overall Vision](#overall-vision)
-   * [Definitions](#definitions)
-      * [Negative Security Model](#negative-security-model)
-      * [Positive Security Model](#positive-security-model)
-      * [Exclusions](#exclusions)
-   * [Overall design vision](#overall-design-vision)
-   * [Overall design constraints](#overall-design-constraints)
-   * [Syntax](#syntax)
-   * [Semantic](#semantic)
-      * [Data Types](#data-types)
-      * [Variables and Constants](#variables-and-constants)
-      * [Predefined Variables](#predefined-variables)
-         * [define a request independent constant](#define-a-request-independent-constant)
-         * [extract a value from the request](#extract-a-value-from-the-request)
-         * [Modification of variables](#modification-of-variables)
-      * [Conditions](#conditions)
-      * [Control Flow](#control-flow)
-         * [if-then-else](#if-then-else)
-         * [include](#include)
-         * [Actions](#actions)
-      * [Rules](#rules)
-      * [rule templates](#rule-templates)
-   * [Examples](#examples)
-      * [Multiple extraction steps](#multiple-extraction-steps)
+  * [Motivation](#motivation)
+  * [Assumptions](#assumptions)
+  * [Overall Vision](#overall-vision)
+  * [Definitions](#definitions)
+     * [Negative Security Model](#negative-security-model)
+     * [Positive Security Model](#positive-security-model)
+     * [Exclusions](#exclusions)
+  * [Overall design vision](#overall-design-vision)
+  * [Overall design constraints](#overall-design-constraints)
+  * [Syntax](#syntax)
+  * [Semantic](#semantic)
+     * [Data Types](#data-types)
+     * [Variables and Constants](#variables-and-constants)
+     * [Predefined Variables](#predefined-variables)
+        * [define a request independent constant](#define-a-request-independent-constant)
+        * [extract a value from the request](#extract-a-value-from-the-request)
+        * [Modification of variables](#modification-of-variables)
+     * [Conditions](#conditions)
+     * [Control Flow](#control-flow)
+        * [if-then-else](#if-then-else)
+        * [include](#include)
+        * [Actions](#actions)
+     * [Rules](#rules)
+        * [classic negative security model](#classic-negative-security-model)
+        * [positive security model](#positive-security-model-1)
+     * [rule templates](#rule-templates)
+  * [Examples](#examples)
+     * [Multiple extraction steps](#multiple-extraction-steps)
+     * [Accessing the same variable multiple times](#accessing-the-same-variable-multiple-times)
 
 ## Motivation ##
 
@@ -431,10 +434,6 @@ The rules are looking the same as above. Instead of "detect" we are using "ensur
 
 ```
           
-
-
-FIXME: need to add syntax for PSM here.                
-
 ### rule templates ###
 
 Not sure if needed. But there may be a use case for a simple form of single inheritance for rules, to avoid repetitive typing:
