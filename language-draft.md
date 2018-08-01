@@ -116,7 +116,7 @@ The following scalar data types should be supported
 Compound types:
 
  - list of (strings, int, regex)
- - collection string -> scalar (multi value like ModSec). I'm not sure if we really need this now, but wee keep
+ - collection string -> scalar (multi value like ModSec). I'm not sure if we need this now, but wee keep
  
 Operations on these types
 
@@ -126,7 +126,7 @@ Operations on these types
  - length(string) -> int # see transformations below
  - length(list) -> int
  - names(collection) -> [string]
- - group(string list) -> collection of element from the list and the number of their occurence
+ - group(string list) -> collection of element from the list and the number of their occurrence
  
  - transformation -> every useful transformation from string -> string or int which is used in CRS
  
@@ -137,7 +137,7 @@ Note that we have a separate type for regex and we also allow a list of regex he
 
 ### Predefined Variables ###
 
-All variables which exist in modsec which describe a part of the request do exist with the same or similar name here for pragmatic reasons. We may rename them later. 
+All variables which exist in ModSecurity which describe a part of the request do exist with the same or similar name here for pragmatic reasons. We may rename them later. 
 
 What is open here, is a clear definition what the variable means, e.g. it is already urldecoded or not.
 
@@ -184,7 +184,7 @@ If you do not add a value here, this is only a declaration. This introduced the 
 
 #### extract a value from the request ####
 
-We need a way to extract  data from the request if the underlying WAF does not already have this variable. Here we are using the define together with an `extract` statement
+We need a way to extract  data from the request if the underlying WAF does not already have this variable. Here we are using the `define` together with an `extract` statement
 
 ```.yaml
 - define:
@@ -199,7 +199,7 @@ We need a way to extract  data from the request if the underlying WAF does not a
 
 If the variable is not defined, the new variable is not defined. A
 rule will not execute on this variables (same as for pre-defined
-variables which does not exist, for example REQUEST_HEADER:foo).
+variables which does not exist, for example `REQUEST_HEADER:foo`).
 
 Not sure if we should allow operations on lists or collections here or if variable should always be a scalar.
 
@@ -233,14 +233,14 @@ The first context is control flow. The result of the evaluation of the condition
 
 The second context is similar to the first, this are preconditions for rules. These conditions decide, if a rule should be executed. This condition is part of the if block inside a rule.
 
-The third is fundamental different. This is the conditions where the rule is really checking for an attack in some variable. Like checking if the string "</" is part of the user input. This is part of the "detect" part of the rule.
+The third is fundamental different. This is the conditions where the rule is checking for an attack in some variable. Like checking if the string `</` is part of the user input. This is part of the "detect" part of the rule.
 
-While these 3 conditions are formally interchangeable (you can always move the "detect" part to the precondition of the rule and use an "always match" operator for the "detect" part), we are making them here to really distinguish between control flow an attack detection. This is important when we using "remove-target-from-rule" or positive security model rule interact in a sane way with rules. 
+While these 3 conditions are formally interchangeable (you can always move the "detect" part to the precondition of the rule and use an "always match" operator for the "detect" part), we are making them  different here to explicitly distinguish between control flow an attack detection. This is important when we using "remove-target-from-rule" or positive security model rule interact in a sane way with rules. 
 
 Also, we restrict the "detect" context to having only one condition (or multiple conditions on the same variable(s))
 
 
-All 3 conditions are more or less the same as modsecurity variables + operators
+All 3 conditions are more or less the same as ModSecurity variables + operators
 
 ```.yaml
 - detect:
@@ -263,7 +263,7 @@ All 3 conditions are more or less the same as modsecurity variables + operators
 
 ```
 
-As variables, all predefined variables and all defined variables
+All predefined variables (like `ARGS` and `REQUEST_HEADER:Content-Length`) and all user defined variables
 can be used here. It is an error when the compiler can not determine
 that a variable is declared here (e.g. if you declare a variable
 in an if block but not in an else block.
@@ -283,7 +283,7 @@ There are additional operators for new data types:
 
 #### if-then-else ####
 
-To allow optional rules (think of skip rules in modsecurity or flags which are checked in every chain rule)
+To allow optional rules (think of skip rules in ModSecurity or flags which are checked in every chain rule)
 
 In the `then` and `else` block can contain anything which is allowed on the toplevel, e.g. "define", "rule", "if" and "include"
 
@@ -364,10 +364,10 @@ A rule contains of meta data, optional preconditions and detect rule. I removed 
             - "application-multi"
     preconditions:
         - variable: REQUEST_METHOD
-          operator: @streq
+          operator: streq
           parameter: "POST"
         - variable: basename_extension
-          operator: @streq
+          operator: streq
           parameter: "foo"
     detect:
         variables: 
@@ -380,7 +380,7 @@ A rule contains of meta data, optional preconditions and detect rule. I removed 
      
 ```  
 
-Note that "checks" is a list of multiple conditions on these variables. The conditions must all be true to match a variable. In most rules, we will only have one condtions. In this case, as a shortcut, "checks" can be omitted and operator and parameter can be moved up one level in the structure.
+Note that "checks" is a list of multiple conditions on these variables. The conditions must all be true to match a variable. In most rules, we will only have one condition. In this case, as a shortcut, "checks" can be omitted and operator and parameter can be moved up one level in the structure.
 
 #### positive security model ####
 
@@ -398,8 +398,7 @@ The rules are looking the same as above. Instead of "detect" we are using "ensur
         variables:
             - REQUEST_COOKIES:__utm
         checks:
-            - operator: @true
-            - operator: @length
+            - operator: length
               parameter: 4k
         mode:
             - sufficient
@@ -414,7 +413,7 @@ The rules are looking the same as above. Instead of "detect" we are using "ensur
         variables:
             - ARGS:product_id   
         checks:
-            - operator: @rx
+            - operator: rx
               parameter: /^\d{1,20}$/
         mode:
             - required
@@ -428,7 +427,7 @@ The rules are looking the same as above. Instead of "detect" we are using "ensur
         variables:
             - ARGS:foo
         checks:
-            - operator: @rx  
+            - operator: rx  
               parameter: /^[0-9a-zA-Z+/]+=?=?$/
         mode:
             - requried
@@ -437,7 +436,9 @@ The rules are looking the same as above. Instead of "detect" we are using "ensur
           
 ### rule templates ###
 
-Not sure if needed. But there may be a use case for a simple form of single inheritance for rules, to avoid repetitive typing:
+This is probably not needed, just an idea. I'm not sure if this will simplify rule writing and understanding.
+
+But there may be a use case for a simple form of single inheritance for rules, to avoid repetitive typing:
 
 Defining a template for a rule:
 
@@ -463,7 +464,7 @@ A rule in a template can inherit from another template.
 
 ## Examples ##
 
-This sections contain examples on how to express some more complicated modsecurity rules in the new language:
+This sections contain examples on how to express some more complicated ModSecurity rules in the new language:
 
 
 ### Multiple extraction steps ###
@@ -572,9 +573,9 @@ Can be translated to
         exclude:
             - REQUEST_COOKIES:/__utm/
         checks:
-            - operator: @pm
+            - operator: pm
               parameter: ${sql_function_name}
-            - operator: @rx
+            - operator: rx
               parameter: ${sql_function_names_regex}
 ```    
 
