@@ -164,7 +164,7 @@ Define "restricted_extensions" as a list of strings. The final transformation is
         - ...
         - "xsd"
         - "xsx"
-    transformation:
+    transformations:
         - ".%{$0}"   
 ``` 
 
@@ -397,8 +397,10 @@ The rules are looking the same as above. Instead of "detect" we are using "ensur
     ensure:
         variables:
             - REQUEST_COOKIES:__utm
+        transformations:
+            - length
         checks:
-            - operator: length
+            - operator: less
               parameter: 4k
         mode:
             - sufficient
@@ -492,7 +494,7 @@ SecRule REQUEST_HEADERS:Authorization "^Basic ([a-zA-Z0-9]+=*)$" "phase:1,id:93,
     type: string
     extract:
         variable: basic_auth_header
-        transformation: base64decode
+        transformations: base64decode
         pattern: /^([^:]+):/
         value: $1
         
