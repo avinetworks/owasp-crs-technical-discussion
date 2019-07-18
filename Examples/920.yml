@@ -1,0 +1,73 @@
+- define:
+    comment: Check HTTP/1.1 request line for correctness
+    name: HTTP/1.1 Request line
+    type: string
+    strategy: whitelist
+    meta:
+        message: "Invalid HTTP Request Line"
+        paranoia-level: 1
+        version: OWASP_CRS/3.1.0
+        - CAPEC:
+            - 272
+        id: 920100
+    conditions:
+        phase: request-nobody
+        operator: rx
+        - variable:
+            - REQUEST_LINE
+          transformations:
+            - lowercase
+        - pattern:
+            - ^(?i:(?:[a-z]{3,10}\s+(?:\w{3,7}?:\/\/[\w\-\.\/]*(?::\d+)?)?\/[^?#]*(?:\?[^#\s]*)?(?:#[\S]*)?)?)$
+            - ^(?i:(?:connect (?:\d{1,3}\.){3}\d{1,3}\.?(?::\d+)?)?)$
+            - ^(?i:get \/[^?#]*(?:\?[^#\s]*)?(?:#[\S]*)?)$
+        actions:
+          deny
+
+- define:
+    comment: Block Filenames with out of place metachars
+    name: HTTP/1.1 Request line
+    type: string
+    strategy: blacklist
+    meta:
+        message: "Attempted multipart/form-data bypass"
+        paranoia-level: 1
+        version: OWASP_CRS/3.1.0
+        - CAPEC:
+            - 272
+        id: 920120
+    conditions:
+        phase: request-body
+        operator: rx
+        - variable:
+            - REQUEST_LINE
+          transformations:
+            - htmlEntityDecode;
+            - lowercase
+        - pattern:
+            - ;
+            - ['\"=]
+        actions:
+          deny
+
+- define:
+    comment: Check to ensure content-lgenth header is numeric
+    name: Content-length numeric header
+    type: string
+    strategy: whitelist
+    meta:
+        message: "Content-Length HTTP header is not numeric"
+        paranoia-level: 1
+        version: OWASP_CRS/3.1.0
+        - CAPEC:
+            - 272
+        id: 920160
+    conditions:
+        phase: request-body
+        operator: rx
+        - variable:
+            - REQUEST_HEADERS:Content-Length
+        - pattern:
+            - ^\d+$
+        actions:
+          deny
